@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using Microsoft.Win32;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -126,7 +125,7 @@ namespace TorRelayFix
                             {
                                 if (!line.Contains("torbrowser.settings.bridges.bridge_strings") &&
                                     !line.Contains("torbrowser.settings.bridges.enabled") &&
-                                    !line.Contains("source"))
+                                    !line.Contains("torbrowser.settings.bridges.source"))
                                     sw.WriteLine(line);
                             }
 

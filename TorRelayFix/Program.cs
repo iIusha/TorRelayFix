@@ -6,11 +6,15 @@ using System.Net;
 using Microsoft.Win32;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace TorRelayFix
 {
     class Program
     {
+        [DllImport("user32.dll")]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         static void Main(string[] args)
         {
             const string ONION_RELAYS = "https://jsonp.afeld.me/?url=https%3A%2F%2Fonionoo.torproject.org%2Fdetails%3Ftype%3Drelay%26running%3Dtrue%26fields%3Dfingerprint%2Cor_addresses";
@@ -40,6 +44,12 @@ namespace TorRelayFix
                     default:
                         break;
                 }
+            }
+
+            if (silent)
+            {
+                IntPtr h = Process.GetCurrentProcess().MainWindowHandle;
+                ShowWindow(h, 0);
             }
 
             if (torPath.Length <= 0)

@@ -66,7 +66,6 @@ namespace TorRelayFix
                 if (!silent) Console.ReadKey();
                 return;
             }
-
             Log($"Tor Browser path: {torPath}", silent);
             Log("Requesting Relays...", silent);
             var request = WebRequest.Create(ONION_RELAYS);
@@ -79,9 +78,11 @@ namespace TorRelayFix
             var relays = Parse(json);
             Log("Got Relays: " + relays.Keys.Count, silent);
             Log("Fetching...", silent);
+            var random = new Random();
+            relays = relays.OrderBy(x => random.Next()).ToDictionary(y => y.Key, y => y.Value);
             Dictionary<string, string> workingRelays = new Dictionary<string, string>();
             int counter = 0;
-            int BATCH_SIZE = 30;
+            int BATCH_SIZE = 200;
             do
             {
                 counter += BATCH_SIZE;
@@ -105,7 +106,6 @@ namespace TorRelayFix
             var success = PatchSettings(torPath, workingRelays);
 
             if (success) Log("Done. Press any button to close window...", silent);
-
             else Log("Something went wrong while adding relays to settings.\n You can add it manually in  'Provide a Bridge' (about:preferences#tor)", silent);
 
             if (!silent) Console.ReadKey();
@@ -241,12 +241,13 @@ namespace TorRelayFix
                 }
                 catch (HttpRequestException ex)
                 {
-                    //Console.WriteLine(ex);
+                    Console.WriteLine(ex);
                 }
                 catch (TimeoutException)
                 {
                     return false;
                 }
+                Console.WriteLine($"{uri} - GOOD");
                 return true;
             }
         }

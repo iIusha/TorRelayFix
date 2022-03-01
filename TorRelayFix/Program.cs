@@ -19,7 +19,7 @@ namespace TorRelayFix
         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         static void Main(string[] args)
         {
-            const string ONION_RELAYS = "https://corsanywhere.herokuapp.com/https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses";
+            const string ONION_RELAYS = "https://tauron.herokuapp.com/https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses";
             string json;
             string torPath = "";
             bool silent = false;

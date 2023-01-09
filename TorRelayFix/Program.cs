@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace TorRelayFix
 {
@@ -19,7 +20,7 @@ namespace TorRelayFix
         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         static void Main(string[] args)
         {
-            const string ONION_RELAYS = "https://tauron.herokuapp.com/https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses";
+            const string ONION_RELAYS = "https://api.codetabs.com/v1/proxy?quest=https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses";
             string json;
             string torPath = "";
             bool silent = false;
@@ -82,7 +83,7 @@ namespace TorRelayFix
             relays = relays.OrderBy(x => random.Next()).ToDictionary(y => y.Key, y => y.Value);
             Dictionary<string, string> workingRelays = new Dictionary<string, string>();
             int counter = 0;
-            int BATCH_SIZE = 200;
+            int BATCH_SIZE = 50;
             do
             {
                 counter += BATCH_SIZE;
@@ -96,9 +97,8 @@ namespace TorRelayFix
 
             } while (workingRelays.Count < 5);
 
-            Log($"Got response from {workingRelays.Count} relays:", silent);
-
-            foreach (var item in workingRelays)
+            Log($"Using relays:", silent);
+            foreach (var item in workingRelays.Take(5))
                 Log($"\taddress: {item.Key},\tfingerprint: {item.Value}", silent);
 
             Log("Adding to Tor...", silent);
@@ -254,14 +254,15 @@ namespace TorRelayFix
 
         public static Dictionary<string, string> Parse(string json)
         {
+            var parsedRelays = JsonConvert.DeserializeObject<RelaysInfo>(json);
             Dictionary<string, string> relays = new Dictionary<string, string>();
-            foreach(var line in Regex.Split(json, "\r\n|\r|\n"))
+            foreach(var relay in parsedRelays.relays)
             {
-                var fp = Regex.Match(line, "\"(?<Key>.*?)\":\"(?<Value>.*?)\"");
-                var addr = Regex.Match(line, "\\,\"(?<Key>.*?)\":\\[\"(?<Value>.*?)\"");
-                if (fp.Success && addr.Success)
-                    if (!relays.ContainsKey(addr.Groups["Value"].Value))
-                    relays.Add(addr.Groups["Value"].Value, fp.Groups["Value"].Value); 
+                var fp = relay.fingerprint;
+                var addr = relay.or_addresses.Where(x => !x.Contains("[")).FirstOrDefault();
+                if (fp.Length > 0 && addr.Length > 0)
+                    if (!relays.ContainsKey(addr))
+                    relays.Add(addr, fp);
             }
             return relays;
         }

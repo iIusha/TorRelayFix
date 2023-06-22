@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using Microsoft.Win32;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
@@ -20,7 +19,7 @@ namespace TorRelayFix
         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         static void Main(string[] args)
         {
-            const string ONION_RELAYS = "https://api.codetabs.com/v1/proxy?quest=https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses";
+            const string ONION_RELAYS = "https://onionoo.torproject.org/details?type=relay&running=true&fields=fingerprint,or_addresses";
             string json;
             string torPath = "";
             bool silent = false;
@@ -103,7 +102,7 @@ namespace TorRelayFix
 
             Log("Adding to Tor...", silent);
 
-            var success = PatchSettings(torPath, workingRelays);
+            var success = PatchSettings(torPath, workingRelays.Take(5).ToList().ToDictionary(x => x.Key, x => x.Value));
 
             if (success) Log("Done. Press any button to close window...", silent);
             else Log("Something went wrong while adding relays to settings.\n You can add it manually in  'Provide a Bridge' (about:preferences#tor)", silent);
@@ -121,43 +120,42 @@ namespace TorRelayFix
 
                 string browserDir = path + @"\TorBrowser\Data\Browser";
                 string[] files = Directory.GetFiles(browserDir, "prefs.js", SearchOption.AllDirectories);
+                
 
                 foreach (var file in files)
                 {
+                    Console.WriteLine(file);
                     string text = File.ReadAllText(file);
                     if (!File.Exists(file + ".bak"))
                     {
                         File.Copy(file, file + ".bak");
                     }
-                    if (text.Contains("torbrowser.settings"))
+                    string tempFile = Path.GetTempFileName();
+
+                    using (var sr = new StreamReader(file))
+                    using (var sw = new StreamWriter(tempFile))
                     {
-                        string tempFile = Path.GetTempFileName();
+                        string line;
 
-                        using (var sr = new StreamReader(file))
-                        using (var sw = new StreamWriter(tempFile))
+                        while ((line = sr.ReadLine()) != null)
                         {
-                            string line;
-
-                            while ((line = sr.ReadLine()) != null)
-                            {
-                                if (!line.Contains("torbrowser.settings.bridges.bridge_strings") &&
-                                    !line.Contains("torbrowser.settings.bridges.enabled") &&
-                                    !line.Contains("torbrowser.settings.bridges.source"))
-                                    sw.WriteLine(line);
-                            }
-
-                            for (int i = 0; i < relays.Count; i++)
-                            {
-                                var item = relays.ElementAt(i);
-                                sw.WriteLine($"user_pref(\"torbrowser.settings.bridges.bridge_strings.{i}\", \"{item.Key} {item.Value}\");");
-                            }
-                            sw.WriteLine("user_pref(\"torbrowser.settings.bridges.enabled\", true);");
-                            sw.WriteLine("user_pref(\"torbrowser.settings.bridges.source\", 2);");
+                            if (!line.Contains("torbrowser.settings.bridges.bridge_strings") &&
+                                !line.Contains("torbrowser.settings.bridges.enabled") &&
+                                !line.Contains("torbrowser.settings.bridges.source"))
+                                sw.WriteLine(line);
                         }
 
-                        File.Delete(file);
-                        File.Move(tempFile, file);
+                        for (int i = 0; i < relays.Count; i++)
+                        {
+                            var item = relays.ElementAt(i);
+                            sw.WriteLine($"user_pref(\"torbrowser.settings.bridges.bridge_strings.{i}\", \"{item.Key} {item.Value}\");");
+                        }
+                        sw.WriteLine("user_pref(\"torbrowser.settings.bridges.enabled\", true);");
+                        sw.WriteLine("user_pref(\"torbrowser.settings.bridges.source\", 2);");
                     }
+
+                    File.Delete(file);
+                    File.Move(tempFile, file);
                 }
                 return true;
             }
